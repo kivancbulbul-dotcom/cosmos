@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-8cPMeD4ErdldWOhpDPHypontkhqBHfImSzOHL16cBCs='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-GfYC6la07WyhyPHSJcyCZpVlI4Cjdxpa23IhAx3EyK8='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <title>Cosmos Rezervasyon</title>
 <link rel="manifest" href="manifest.json" />
@@ -133,13 +133,13 @@
     width:100%;
     overflow:hidden;
     aspect-ratio: 1600 / 980;
+    container-type: inline-size;   /* içerideki yazılar kroki genişliğine göre ölçeklenir (cqw) */
   }
   .room{
     position:absolute;
     top:0; left:0;
     width:100%;
     aspect-ratio: 1600 / 980;
-    min-width:680px;
     background-color:var(--floor);
   }
   .room.rect-room{ border:7px solid var(--wall); border-radius:0; }
@@ -173,16 +173,28 @@
   .giris-el--big140 .strip{ width:78.4px; height:11.2px; }
   .pencere-el{ color:var(--ink-soft); font-size:9px; font-weight:700; letter-spacing:1px; white-space:nowrap; }
 
+  /* ---- Kroki içi öğeler kroki genişliğiyle ölçeklenir (950px genişlik = tasarım ölçüsü) ---- */
+  .giris-el{ font-size:clamp(7px,1.16cqw,11px); }
+  .giris-el .strip{ width:5.9cqw; height:0.84cqw; min-height:4px; }
+  .giris-el--big{ font-size:clamp(8px,1.74cqw,16.5px); }
+  .giris-el--big .strip{ width:8.84cqw; height:1.26cqw; }
+  .giris-el--big140{ font-size:clamp(8px,1.62cqw,15.4px); }
+  .giris-el--big140 .strip{ width:8.25cqw; height:1.18cqw; }
+  .giris-el--big2{ font-size:clamp(9px,2.32cqw,22px); }
+  .giris-el--big2 .strip{ width:11.8cqw; height:1.68cqw; }
+  .kolon-box{ font-size:clamp(7px,1.16cqw,11px); }
+  .kitaplik-box{ font-size:clamp(7px,1.05cqw,10px); }
+
   /* ---- Dolaplar ---- */
-  .giris-el--vertical{ display:flex; align-items:center; gap:8px; font-size:14px; }
+  .giris-el--vertical{ display:flex; align-items:center; gap:8px; gap:0.84cqw; font-size:14px; font-size:clamp(7px,1.47cqw,14px); }
   .giris-el--vertical .giris-text{ text-align:right; line-height:1.15; }
-  .giris-el--vertical .strip{ width:11px; height:88px; margin:0; border-radius:3px; flex:0 0 auto; }
+  .giris-el--vertical .strip{ width:11px; height:88px; width:1.16cqw; height:9.26cqw; margin:0; border-radius:3px; flex:0 0 auto; }
   .dolap-blok-box{
     width:100%; height:100%; border-radius:4px;
     background:linear-gradient(180deg,#3b3530,#24201c);
     box-shadow:0 3px 8px var(--shadow);
   }
-  .kroki-etiket{ font-weight:800; font-size:14px; letter-spacing:3px; color:#2a2620; white-space:nowrap; }
+  .kroki-etiket{ font-weight:800; font-size:14px; font-size:clamp(7px,1.47cqw,14px); letter-spacing:0.22em; color:#2a2620; white-space:nowrap; }
   .merdiven-svg{ display:block; width:100%; height:100%; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.25)); }
   .locker-wrap{ position:absolute; transform:translate(-50%,-50%); }
   .table-body.locker-body{
@@ -226,7 +238,7 @@
     border:1px solid rgba(0,0,0,0.25);
     box-shadow:0 3px 6px var(--shadow);
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    font-weight:800; font-size:clamp(12px,1.9vw,17px); color:#fff;
+    font-weight:800; font-size:clamp(12px,1.9vw,17px); font-size:clamp(9px,1.79cqw,17px); color:#fff;
     cursor:pointer;
     user-select:none;
     transition: background 0.15s ease;
@@ -314,12 +326,29 @@
   .confirm-text{ margin:2px 0 16px; font-size:14px; line-height:1.45; color:var(--ink); }
 
   body:not(.local-mode) .local-only{ display:none !important; }
-  .controls--secondary{ padding-top:6px; }
   .mini-btn{ background:transparent; color:var(--ink-soft); border:1px solid rgba(0,0,0,0.2); border-radius:8px; padding:5px 10px; font-size:11px; font-weight:700; cursor:pointer; }
   .mini-btn:active{ opacity:0.7; }
   footer.status.status-error{ color:var(--occ-dark); font-weight:700; }
 
   /* ---- Bildirim balonu ---- */
+  @media (orientation: landscape) and (max-height: 820px){
+    header{ padding:6px 16px 0; }
+    header img.brand-logo{ height:52px; }
+    .grand-total{ padding:2px 12px 0; font-size:13px; }
+    .overview{ padding:6px 12px 2px; gap:8px; }
+    .overview-card{ padding:6px 14px; border-radius:12px; }
+    .overview-card .oc-title{ font-size:15px; }
+    .legend{ padding:0 12px 2px; }
+    .room-header-row{ margin:0 0 3px; gap:12px; }
+    .room-title{ font-size:20px; }
+    .stat{ padding:3px 9px; }
+    .stat .num{ font-size:14px; }
+    .room-wrapper{ padding-bottom:4px; }
+    .controls{ padding-top:6px; }
+    footer.status{ padding-top:3px; font-size:10px; }
+    body{ padding-bottom:6px; }
+  }
+
   .toast{
     position:fixed; left:50%; bottom:22px; transform:translate(-50%, 20px);
     background:var(--ink); color:var(--bg); padding:10px 16px; border-radius:10px;
@@ -371,8 +400,6 @@
   <button class="reset-btn redo-btn" id="redoBtn" disabled>↷ İleri Al</button>
   <button class="reset-btn" id="resetBtn">Bu Salonu Boşalt</button>
   <button class="reset-btn resv-open-btn" id="resvOpenBtn">Rezervasyon Ekle / Düzenle</button>
-</div>
-<div class="controls controls--secondary local-only">
   <button class="mini-btn local-only" id="backupBtn">Yedek Al</button>
   <button class="mini-btn local-only" id="restoreBtn">Yedekten Yükle</button>
   <input type="file" id="restoreFile" accept="application/json,.json" hidden />
@@ -964,17 +991,47 @@
     var maxH = body.clientHeight * 0.58;
     function over(){ return el.scrollWidth > el.clientWidth + 0.5 || el.scrollHeight > maxH; }
     var guard = 0;
-    while(over() && size > 9.5 && guard++ < 40){ size -= 0.5; el.style.fontSize = size + "px"; }
+    while(over() && size > 8 && guard++ < 40){ size -= 0.5; el.style.fontSize = size + "px"; }
     if(over()){
       el.style.overflowWrap = "anywhere";
-      while(over() && size > 7.5 && guard++ < 60){ size -= 0.5; el.style.fontSize = size + "px"; }
+      while(over() && size > 7 && guard++ < 60){ size -= 0.5; el.style.fontSize = size + "px"; }
+    }
+  }
+  // Krokiyi ekranda kalan gerçek alana sığdır: üstteki ve alttaki bölümlerin yüksekliğini ölçüp
+  // kalan yüksekliğe göre genişliği belirler (oran 1600:980). Çok küçük ekranlarda okunabilirlik için
+  // en az 520px'e iner; o durumda sayfa hafifçe kayar ama kroki hiçbir zaman kesilmez.
+  var ROOM_RATIO = 1600 / 980;
+  function fitRoomSize(){
+    if(!roomInnerEl || !roomCropEl) return;
+    var maxW = roomScaleEl.clientWidth;
+    for(var pass = 0; pass < 2; pass++){
+      var rect = roomCropEl.getBoundingClientRect();
+      var scrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+      var above = rect.top + scrollY;
+      // Alttaki içeriğin gerçek yüksekliği (sayfanın boş kalan alt kısmı sayılmaz)
+      var contentBottom = document.body.getBoundingClientRect().bottom + scrollY;
+      var below = contentBottom - (rect.bottom + scrollY);
+      var avail = window.innerHeight - above - below - 2;
+      var w = Math.min(maxW, avail * ROOM_RATIO);
+      w = Math.max(w, Math.min(maxW, 520));
+      roomInnerEl.style.width = Math.floor(w) + "px";
     }
   }
   var fitTimer = null;
-  window.addEventListener("resize", function(){
+  function scheduleFit(){
     clearTimeout(fitTimer);
-    fitTimer = setTimeout(function(){ try{ refreshTableVisuals(activeRoom); }catch(e){} }, 150);
-  });
+    fitTimer = setTimeout(function(){
+      try{ fitRoomSize(); }catch(e){}
+      try{ refreshTableVisuals(activeRoom); }catch(e){}
+    }, 120);
+  }
+  window.addEventListener("resize", scheduleFit);
+  window.addEventListener("orientationchange", scheduleFit);
+  window.addEventListener("load", scheduleFit);
+  (function(){
+    var logo = document.querySelector("header img.brand-logo");
+    if(logo && !logo.complete) logo.addEventListener("load", scheduleFit);
+  })();
 
   function refreshTableVisuals(rid){
     ROOMS[rid].tables.forEach(function(t){
@@ -1042,6 +1099,7 @@
     document.getElementById("resvTitle").textContent = isLockers ? "Dolap Rezervasyonu" : "Rezervasyon";
     populateResvSelect();
     renderOverview();
+    try{ fitRoomSize(); refreshTableVisuals(rid); }catch(e){}
   }
 
   function renderAll(){
