@@ -1,6 +1,6 @@
 // Cosmos Rezervasyon — service worker
 // Sürüm adı her güncellemede değiştirilir; eski önbellekler otomatik silinir.
-const CACHE_NAME = "cosmos-rezervasyon-v2";
+const CACHE_NAME = "cosmos-rezervasyon-v3";
 const CORE_ASSETS = [
   "./",
   "./index.html",
@@ -14,7 +14,7 @@ const CORE_ASSETS = [
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) =>
-      Promise.all(CORE_ASSETS.map((u) => cache.add(u).catch(() => {})))
+      Promise.all(CORE_ASSETS.map((u) => cache.add(new Request(u, { cache: "reload" })).catch(() => {})))
     )
   );
   self.skipWaiting();
@@ -45,7 +45,8 @@ self.addEventListener("fetch", (event) => {
   if (isPage) {
     // Sayfa için AĞ ÖNCE: güncel (güvenlik düzeltmeli) sürüm hemen gelir; çevrimdışıysa önbellekten.
     event.respondWith(
-      fetch(req)
+      // cache:"no-store" → tarayıcının HTTP önbelleğini (GitHub Pages 10 dk) atla, her açılışta en son sürümü al.
+      fetch(req.url, { cache: "no-store", credentials: "same-origin" })
         .then((res) => {
           if (isCacheable(res)) {
             const copy = res.clone();
