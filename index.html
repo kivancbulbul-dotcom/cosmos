@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-MEt33MjvZN+0uvcD01SH39lFtsyKSp4oilZ8rZkmyRo='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-PsFWznc5FYWyrm4rmoTubKDy1MxZNoEcn3gIOUfh9MU='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <title>Cosmos Rezervasyon</title>
 <link rel="manifest" href="manifest.json" />
@@ -99,6 +99,7 @@
     padding:8px 12px 2px;
   }
   .grand-total b{ color:var(--ink); }
+  .grand-total .gt-item{ white-space:nowrap; }
 
 
   .room-header-row{ display:flex; align-items:center; justify-content:center; gap:16px; flex-wrap:wrap; margin:2px 0 4px; }
@@ -110,15 +111,48 @@
   .stat.occ .num{ color:var(--occ-dark); }
   .stat.member .num{ color:var(--member-dark); }
 
-  .legend{ display:flex; justify-content:center; gap:9px; padding:1px 12px 4px; font-size:8px; color:var(--ink-soft); flex-wrap:wrap; }
-  .legend span{ display:inline-flex; align-items:center; gap:3px; }
-  .swatch{ width:6px; height:6px; border-radius:50%; display:inline-block; }
-  .swatch.free{ background:var(--free); }
-  .swatch.occ{ background:var(--occ); }
-  .swatch.member{ background:var(--member); }
-  .swatch.pend{ background:#d9b64a; }
 
   .room-wrapper{ overflow-x:auto; overflow-y:visible; padding:0 8px 8px; }
+
+  /* ---- Ana yerleşim ----
+     Dar / dikey ekran: sıra yukarıdan aşağı (logo, toplam, kutucuklar, kroki, butonlar).
+     Geniş yatay ekran: kroki solda tüm yüksekliği kullanır; logo, toplam, kutucuklar ve butonlar sağ panelde. */
+  .app-layout{ display:flex; flex-direction:column; }
+  .side-panel{ display:contents; }
+  .side-panel header{ order:1; }
+  .side-panel .grand-total{ order:2; }
+  .side-panel .overview{ order:3; justify-content:flex-end; }
+  .app-layout > .room-wrapper{ order:4; }
+  .side-panel .controls{ order:5; }
+  .side-panel footer.status{ order:6; }
+
+  @media (orientation: landscape) and (min-width: 900px){
+    body{ padding-bottom:0; }
+    .app-layout{ flex-direction:row; align-items:center; gap:20px; padding:10px 16px; }
+    .app-layout > .room-wrapper{ order:0; flex:1 1 0; min-width:0; padding:0; overflow:visible; }
+    .app-layout .room-scale{ margin:0; }
+    .app-layout .room-inner{ margin:0; }                 /* kroki sola yaslı */
+    .app-layout .room-header-row{ justify-content:flex-start; }
+    .side-panel{
+      order:1;
+      display:flex; flex-direction:column; gap:10px;
+      flex:0 0 268px; width:268px; align-self:center;
+    }
+    .side-panel header{ padding:0 0 2px; background:none; }
+    .side-panel header img.brand-logo{ height:auto; width:100%; max-width:230px; }
+    .side-panel .grand-total{ padding:0; font-size:12.5px; line-height:1.45; }
+    .side-panel .overview{ flex-direction:column; flex-wrap:nowrap; align-items:stretch; padding:0; gap:8px; }
+    .side-panel .overview-card{ justify-content:space-between; padding:8px 14px; }
+    .side-panel .controls{
+      display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:4px 0 0;
+    }
+    .side-panel .controls #resetBtn,
+    .side-panel .controls #resvOpenBtn{ grid-column:1 / -1; }
+    .side-panel .controls .reset-btn,
+    .side-panel .controls .mini-btn{ width:100%; }
+    .side-panel footer.status{ padding:0; text-align:center; }
+  }
+
   .room-scale{ width:100%; max-width:1150px; margin:0 auto; position:relative; }
   .room-scale.room-scale--wide{ max-width:none; }
 
@@ -338,7 +372,6 @@
     .overview{ padding:6px 12px 2px; gap:8px; }
     .overview-card{ padding:6px 14px; border-radius:12px; }
     .overview-card .oc-title{ font-size:15px; }
-    .legend{ padding:0 12px 2px; }
     .room-header-row{ margin:0 0 3px; gap:12px; }
     .room-title{ font-size:20px; }
     .stat{ padding:3px 9px; }
@@ -361,21 +394,7 @@
 </head>
 <body>
 
-<header>
-  <img class="brand-logo" src="logo.png" alt="Cosmos Coffee Library" />
-</header>
-
-<div class="grand-total" id="grandTotal"></div>
-
-<div class="overview" id="overview"></div>
-
-<div class="legend">
-  <span><i class="swatch free"></i>Boş</span>
-  <span><i class="swatch occ"></i>Dolu</span>
-  <span><i class="swatch member"></i>Rezerve</span>
-  <span><i class="swatch pend"></i>Güncelleniyor</span>
-</div>
-
+<div class="app-layout">
 <div class="room-wrapper">
   <div class="room-scale" id="roomScale">
     <div class="room-inner" id="roomInner">
@@ -394,6 +413,14 @@
     </div>
   </div>
 </div>
+<aside class="side-panel">
+<header>
+  <img class="brand-logo" src="logo.png" alt="Cosmos Coffee Library" />
+</header>
+
+<div class="grand-total" id="grandTotal"></div>
+
+<div class="overview" id="overview"></div>
 
 <div class="controls">
   <button class="reset-btn undo-btn" id="undoBtn" disabled>↶ Geri Al</button>
@@ -406,6 +433,8 @@
 </div>
 
 <footer class="status" id="syncStatus">Bağlanılıyor…</footer>
+</aside>
+</div>
 
 <div class="modal-backdrop" id="resvBackdrop">
   <div class="modal-box">
@@ -1003,15 +1032,27 @@
   var ROOM_RATIO = 1600 / 980;
   function fitRoomSize(){
     if(!roomInnerEl || !roomCropEl) return;
+    var layout = document.querySelector(".app-layout");
+    var sideMode = layout && getComputedStyle(layout).flexDirection === "row";
     var maxW = roomScaleEl.clientWidth;
     for(var pass = 0; pass < 2; pass++){
-      var rect = roomCropEl.getBoundingClientRect();
-      var scrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
-      var above = rect.top + scrollY;
-      // Alttaki içeriğin gerçek yüksekliği (sayfanın boş kalan alt kısmı sayılmaz)
-      var contentBottom = document.body.getBoundingClientRect().bottom + scrollY;
-      var below = contentBottom - (rect.bottom + scrollY);
-      var avail = window.innerHeight - above - below - 2;
+      var avail;
+      if(sideMode){
+        // Geniş yatay ekran: kroki sütunu ekranın tüm yüksekliğini kullanır
+        var cs = getComputedStyle(layout);
+        var pad = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+        var headRow = roomInnerEl.querySelector(".room-header-row");
+        var headH = headRow ? headRow.getBoundingClientRect().height + parseFloat(getComputedStyle(headRow).marginTop) + parseFloat(getComputedStyle(headRow).marginBottom) : 0;
+        avail = window.innerHeight - pad - headH - 2;
+      } else {
+        var rect = roomCropEl.getBoundingClientRect();
+        var scrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+        var above = rect.top + scrollY;
+        // Alttaki içeriğin gerçek yüksekliği (sayfanın boş kalan alt kısmı sayılmaz)
+        var contentBottom = document.body.getBoundingClientRect().bottom + scrollY;
+        var below = contentBottom - (rect.bottom + scrollY);
+        avail = window.innerHeight - above - below - 2;
+      }
       var w = Math.min(maxW, avail * ROOM_RATIO);
       w = Math.max(w, Math.min(maxW, 520));
       roomInnerEl.style.width = Math.floor(w) + "px";
@@ -1084,7 +1125,7 @@
       if(ROOMS[rid].kind === "lockers") return; // dolaplar masa toplamına katılmaz
       gFree += c.free; gOcc += c.occ; gResv += c.resv; gTotal += c.total;
     });
-    grandTotalEl.innerHTML = "Tüm salonlar toplamı: <b>" + gFree + "</b> boş &middot; <b>" + gOcc + "</b> dolu &middot; <b>" + gResv + "</b> rezerve &middot; <b>" + gTotal + "</b> masa";
+    grandTotalEl.innerHTML = "<span class=\"gt-item\">Tüm salonlar toplamı:</span> <span class=\"gt-item\"><b>" + gFree + "</b> boş</span> &middot; <span class=\"gt-item\"><b>" + gOcc + "</b> dolu</span> &middot; <span class=\"gt-item\"><b>" + gResv + "</b> rezerve</span> &middot; <span class=\"gt-item\"><b>" + gTotal + "</b> masa</span>";
   }
 
   function switchRoom(rid){
