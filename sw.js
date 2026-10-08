@@ -1,6 +1,6 @@
 // Cosmos Rezervasyon — service worker
 // Sürüm adı her güncellemede değiştirilir; eski önbellekler otomatik silinir.
-const CACHE_NAME = "cosmos-rezervasyon-v3";
+const CACHE_NAME = "cosmos-rezervasyon-v4";
 const CORE_ASSETS = [
   "./",
   "./index.html",
@@ -40,38 +40,22 @@ self.addEventListener("fetch", (event) => {
   // Yalnızca kendi alan adımızdaki dosyalarla ilgilen; dış istekleri hiç önbelleğe alma.
   if (url.origin !== self.location.origin) return;
 
+  // HER ŞEY İÇİN AĞ ÖNCE: internet varsa sayfa, logo ve ikonlar her açılışta GitHub'dan en güncel haliyle gelir
+  // (tarayıcının HTTP önbelleği de atlanır). İnternet yoksa son kaydedilen kopya kullanılır.
   const isPage = req.mode === "navigate" || url.pathname.endsWith("/") || url.pathname.endsWith("/index.html");
-
-  if (isPage) {
-    // Sayfa için AĞ ÖNCE: güncel (güvenlik düzeltmeli) sürüm hemen gelir; çevrimdışıysa önbellekten.
-    event.respondWith(
-      // cache:"no-store" → tarayıcının HTTP önbelleğini (GitHub Pages 10 dk) atla, her açılışta en son sürümü al.
-      fetch(req.url, { cache: "no-store", credentials: "same-origin" })
-        .then((res) => {
-          if (isCacheable(res)) {
-            const copy = res.clone();
-            caches.open(CACHE_NAME).then((c) => c.put("./index.html", copy));
-          }
-          return res;
-        })
-        .catch(() => caches.match("./index.html").then((r) => r || caches.match("./")))
-    );
-    return;
-  }
-
-  // Görseller ve manifest için: önbellekten hızlı sun, arka planda güncelle.
   event.respondWith(
-    caches.match(req).then((cached) => {
-      const network = fetch(req)
-        .then((res) => {
-          if (isCacheable(res)) {
-            const copy = res.clone();
-            caches.open(CACHE_NAME).then((c) => c.put(req, copy));
-          }
-          return res;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    fetch(req.url, { cache: "no-store", credentials: "same-origin" })
+      .then((res) => {
+        if (isCacheable(res)) {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((c) => c.put(isPage ? "./index.html" : req, copy));
+        }
+        return res;
+      })
+      .catch(() =>
+        isPage
+          ? caches.match("./index.html").then((r) => r || caches.match("./"))
+          : caches.match(req, { ignoreSearch: true })
+      )
   );
 });
