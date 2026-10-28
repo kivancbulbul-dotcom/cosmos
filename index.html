@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-FujdPs5V8FZ8rdDFa58V3amnoYjdMxXdDSvoLakWWSk='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-lcnvV/MK8PF2DLdgWC55aL5AG3Y4dANLnZbVSVSD/Sg='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <title>Cosmos Rezervasyon</title>
 <link rel="manifest" href="manifest.json" />
@@ -727,7 +727,7 @@
 
   // ---- Güvenlik: veri doğrulama yardımcıları ----
   var NAME_MAX = 60;               // ad-soyad için azami karakter
-  var RETENTION_DAYS = 30;         // rezervasyon verisi bitişten kaç gün sonra silinir
+  // Biten rezervasyonlar otomatik silinmez: siz değiştirene veya kaldırana kadar uyarı (⚠) gösterilmeye devam eder.
   var DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
   function isDateStr(v){ return typeof v === "string" && DATE_RE.test(v); }
   function cleanName(v){
@@ -770,9 +770,42 @@
     return d.getFullYear() + "-" + p(d.getMonth()+1) + "-" + p(d.getDate());
   }
 
-  // Rezervasyon bitiş tarihinden tam 1 gün sonra (masa yeşile döndüğü ilk gün) uyarı gösterilir
-  function reservationEndedYesterday(s, today){
-    return !!(s.resvEnd && !hasActiveReservation(s, today) && addDaysStr(s.resvEnd, 1) === today);
+  // Rezervasyonun bitiş tarihi geçtiyse (masa/dolap yeşile döndükten sonra) uyarı gösterilir.
+  // Uyarı, rezervasyon bilgileri değiştirilene veya rezervasyon kaldırılana kadar her gün görünmeye devam eder.
+  function reservationEnded(s, today){
+    return !!(isDateStr(s.resvEnd) && today > s.resvEnd);
+  }
+
+  // ---- Aynı kişiye çakışan tarihlerde ikinci rezervasyon engeli ----
+  // İsim karşılaştırması büyük/küçük harf ve fazla boşluklardan bağımsızdır (Türkçe kurallarıyla).
+  function nameKey(n){ return cleanName(n).toLocaleLowerCase("tr-TR"); }
+  function rangesOverlap(aStart, aEnd, bStart, bEnd){ return aStart <= bEnd && bStart <= aEnd; }
+  function trDate(d){
+    if(!isDateStr(d)) return d || "";
+    var p = d.split("-");
+    return p[2] + "." + p[1] + "." + p[0];
+  }
+  // Masalar kendi aralarında (tüm salonlar), dolaplar kendi aralarında kontrol edilir.
+  function findNameConflict(selfKey, name, start, end){
+    var nk = nameKey(name);
+    if(!nk) return null;
+    var selfRid = selfKey.split("::")[0];
+    var selfLockers = ROOMS[selfRid].kind === "lockers";
+    for(var i = 0; i < ROOM_ORDER.length; i++){
+      var rid = ROOM_ORDER[i], room = ROOMS[rid];
+      if((room.kind === "lockers") !== selfLockers) continue;
+      for(var j = 0; j < room.tables.length; j++){
+        var t = room.tables[j], k = key(rid, t.id);
+        if(k === selfKey) continue;
+        var o = state[k];
+        if(!o || !o.resvName || !isDateStr(o.resvStart) || !isDateStr(o.resvEnd)) continue;
+        if(nameKey(o.resvName) !== nk) continue;
+        if(rangesOverlap(start, end, o.resvStart, o.resvEnd)){
+          return { rid:rid, label:t.label, name:o.resvName, start:o.resvStart, end:o.resvEnd };
+        }
+      }
+    }
+    return null;
   }
 
   function getDisplayStatus(k){
@@ -1014,10 +1047,10 @@
     var s = state[k] || blankTableData();
     var nameEl = nameEls[k];
     var today = todayStr();
-    var endedWarning = reservationEndedYesterday(s, today);
+    var endedWarning = reservationEnded(s, today);
     if(body){
       body.classList.toggle("resv-ended", endedWarning);
-      body.title = endedWarning ? ("Rezervasyon " + s.resvEnd + " tarihinde sona erdi." + (s.resvName ? (" (" + maskName(s.resvName) + ")") : "")) : "";
+      body.title = endedWarning ? ("Rezervasyon " + trDate(s.resvEnd) + " tarihinde sona erdi. Uyarı, rezervasyon düzenlenene veya kaldırılana kadar görünür." + (s.resvName ? (" (" + maskName(s.resvName) + ")") : "")) : "";
     }
     var starEl = starEls[k];
     var showStar = (display === "rezerve" || display === "dolu") && !!s.resvName;
@@ -1229,7 +1262,6 @@
       if(raw) applyStoredMap(JSON.parse(raw));
     }catch(e){}
     safeRenderAll();
-    purgeExpired();
   }
   function saveLocal(){
     try{
@@ -1408,24 +1440,6 @@
     persist(k, [field]);
   }
 
-  // ---- Saklama süresi: bitişinden RETENTION_DAYS gün geçmiş rezervasyonların kişisel verisi silinir ----
-  function purgeExpired(){
-    var cutoff = addDaysStr(todayStr(), -RETENTION_DAYS);
-    if(!cutoff) return;
-    ROOM_ORDER.forEach(function(rid){
-      ROOMS[rid].tables.forEach(function(t){
-        var k = key(rid, t.id);
-        var s = state[k];
-        if(s && s.resvEnd && s.resvEnd < cutoff){
-          s.resvName = ""; s.resvStart = ""; s.resvEnd = ""; s.overrideDate = "";
-          try{ renderTableEl(k); }catch(e){}
-          persist(k, ["resvName","resvStart","resvEnd","overrideDate"], { silent:true });
-        }
-      });
-    });
-    safeRenderAll();
-  }
-
   function safeRenderAll(){
     try{ renderAll(); }catch(e){}
   }
@@ -1456,10 +1470,7 @@
           }
         });
         safeRenderAll();
-        if(!firstSnapshotDone){
-          firstSnapshotDone = true;
-          setTimeout(purgeExpired, 1500);
-        }
+        firstSnapshotDone = true;
       }, function(){
         setSyncText("Senkronizasyon durdu. Yerel moda geçildi.");
         db = null;
@@ -1580,6 +1591,15 @@
     if(!name || !start || !end){ showAlert("Lütfen ad soyad, başlangıç ve bitiş tarihini girin."); return; }
     if(!isDateStr(start) || !isDateStr(end)){ showAlert("Tarih biçimi geçersiz."); return; }
     if(end < start){ showAlert("Bitiş tarihi başlangıç tarihinden önce olamaz."); return; }
+    var clash = findNameConflict(k, name, start, end);
+    if(clash){
+      var cRoom = ROOMS[clash.rid];
+      var where = cRoom.kind === "lockers" ? (clash.label + " numaralı dolapta") : (cRoom.name + " salonunda " + clash.label + " masasında");
+      showAlert("Bu rezervasyon açılamaz: " + clash.name + " adına " + trDate(clash.start) + " – " + trDate(clash.end) +
+        " tarihleri arasında " + where + " zaten rezervasyon var. Aynı kişiye aynı tarihlerde ikinci bir " +
+        (cRoom.kind === "lockers" ? "dolap" : "masa") + " rezervasyonu yapılamaz.");
+      return;
+    }
     var prevSave = snapshotOf(k);
     state[k].resvName = name;
     state[k].resvStart = start;
@@ -1754,7 +1774,6 @@
     if(d !== lastSeenDate){
       lastSeenDate = d;
       safeRenderAll();
-      purgeExpired();
     }
   }, 60000);
 })();
